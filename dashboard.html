@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scout Dashboard - JakeInSport</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #34495e;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        h2 {
+            color: var(--secondary);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .input-group {
+            margin-bottom: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .stat-label {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        #profileImage {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        #profileImage img {
+            width: 100%;
+            height: auto;
+        }
+        
+        .profile-header {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .profile-info {
+            flex-grow: 1;
+        }
+        
+        .profile-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .stat-box {
+            background: var(--light);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .star-rating {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        
+        .star {
+            cursor: pointer;
+            color: #ddd;
+            font-size: 24px;
+        }
+        
+        .star.active {
+            color: #ffc107;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Scout Dashboard</h1>
+        <div class="action-buttons">
+            <button id="saveBtn" class="btn btn-success">Save Report</button>
+            <button id="exportExcelBtn" class="btn">Export to Excel</button>
+            <button id="resetBtn" class="btn btn-danger">Reset</button>
+        </div>
+    </header>
+    
+    <div class="dashboard-container">
+        <!-- Player Information Card -->
+        <div class="card full-width">
+            <h2>Player Information</h2>
+            <div class="profile-header">
+                <div id="profileImage">
+                    <span>Photo</span>
+                </div>
+                <div class="profile-info">
+                    <div class="input-group">
+                        <label for="playerName">Player Name</label>
+                        <input type="text" id="playerName" placeholder="Enter player name">
+                    </div>
+                    <div class="input-group">
+                        <div class="stat-grid">
+                            <div>
+                                <label for="playerAge">Age</label>
+                                <input type="number" id="playerAge" placeholder="Age">
+                            </div>
+                            <div>
+                                <label for="playerPosition">Position</label>
+                                <input type="text" id="playerPosition" placeholder="Position">
+                            </div>
+                            <div>
+                                <label for="playerClub">Club</label>
+                                <input type="text" id="playerClub" placeholder="Club">
+                            </div>
+                            <div>
+                                <label for="playerHeight">Height (cm)</label>
+                                <input type="number" id="playerHeight" placeholder="Height">
+                            </div>
+                            <div>
+                                <label for="playerWeight">Weight (kg)</label>
+                                <input type="number" id="playerWeight" placeholder="Weight">
+                            </div>
+                            <div>
+                                <label for="playerFoot">Preferred Foot</label>
+                                <select id="playerFoot">
+                                    <option value="">Select foot</option>
+                                    <option value="Right">Right</option>
+                                    <option value="Left">Left</option>
+                                    <option value="Both">Both</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="playerImage">Player Image URL</label>
+                <input type="text" id="playerImage" placeholder="Enter image URL (optional)">
+            </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="card">
+            <h2>Performance Metrics</h2>
+            <div class="tabs">
+                <div class="tab active" data-tab="technical">Technical</div>
+                <div class="tab" data-tab="physical">Physical</div>
+                <div class="tab" data-tab="mental">Mental</div>
+            </div>
+            
+            <div class="tab-content active" id="technical">
+                <div class="stat-grid">
+                    <div class="input-group">
+                        <label for="statPassing">Passing</label>
+                        <input type="range" id="statPassing" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="passingValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statShooting">Shooting</label>
+                        <input type="range" id="statShooting" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="shootingValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statDribbling">Dribbling</label>
+                        <input type="range" id="statDribbling" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="dribblingValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statFirstTouch">First Touch</label>
+                        <input type="range" id="statFirstTouch" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="firstTouchValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statTackling">Tackling</label>
+                        <input type="range" id="statTackling" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="tacklingValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statHeading">Heading</label>
+                        <input type="range" id="statHeading" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="headingValue">5</span>/10</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="physical">
+                <div class="stat-grid">
+                    <div class="input-group">
+                        <label for="statSpeed">Speed</label>
+                        <input type="range" id="statSpeed" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="speedValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statStrength">Strength</label>
+                        <input type="range" id="statStrength" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="strengthValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statStamina">Stamina</label>
+                        <input type="range" id="statStamina" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="staminaValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statAgility">Agility</label>
+                        <input type="range" id="statAgility" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="agilityValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statJumping">Jumping</label>
+                        <input type="range" id="statJumping" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="jumpingValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statBalance">Balance</label>
+                        <input type="range" id="statBalance" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="balanceValue">5</span>/10</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="mental">
+                <div class="stat-grid">
+                    <div class="input-group">
+                        <label for="statDecisionMaking">Decision Making</label>
+                        <input type="range" id="statDecisionMaking" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="decisionMakingValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statPositioning">Positioning</label>
+                        <input type="range" id="statPositioning" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="positioningValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statTeamwork">Teamwork</label>
+                        <input type="range" id="statTeamwork" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="teamworkValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statLeadership">Leadership</label>
+                        <input type="range" id="statLeadership" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="leadershipValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statWorkRate">Work Rate</label>
+                        <input type="range" id="statWorkRate" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="workRateValue">5</span>/10</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="statConcentration">Concentration</label>
+                        <input type="range" id="statConcentration" min="1" max="10" value="5" class="stat-slider">
+                        <div class="stat-value-display"><span id="concentrationValue">5</span>/10</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Key Stats Card -->
+        <div class="card">
+            <h2>Key Performance Data</h2>
+            <div class="input-group">
+                <label for="matchDate">Match Date</label>
+                <input type="date" id="matchDate">
+            </div>
+            <div class="input-group">
+                <label for="opposition">Opposition</label>
+                <input type="text" id="opposition" placeholder="Opposition team">
+            </div>
+            <div class="stat-grid">
+                <div class="input-group">
+                    <label for="minutesPlayed">Minutes Played</label>
+                    <input type="number" id="minutesPlayed" placeholder="Minutes">
+                </div>
+                <div class="input-group">
+                    <label for="goals">Goals</label>
+                    <input type="number" id="goals" placeholder="Goals">
+                </div>
+                <div class="input-group">
+                    <label for="assists">Assists</label>
+                    <input type="number" id="assists" placeholder="Assists">
+                </div>
+                <div class="input-group">
+                    <label for="passCompletionRate">Pass Completion %</label>
+                    <input type="number" id="passCompletionRate" placeholder="% of passes completed">
+                </div>
+                <div class="input-group">
+                    <label for="keyPasses">Key Passes</label>
+                    <input type="number" id="keyPasses" placeholder="Key passes">
+                </div>
+                <div class="input-group">
+                    <label for="tackles">Tackles</label>
+                    <input type="number" id="tackles" placeholder="Tackles">
+                </div>
+                <div class="input-group">
+                    <label for="interceptions">Interceptions</label>
+                    <input type="number" id="interceptions" placeholder="Interceptions">
+                </div>
+                <div class="input-group">
+                    <label for="duelsWon">Duels Won</label>
+                    <input type="number" id="duelsWon" placeholder="Duels won">
+                </div>
+                <div class="input-group">
+                    <label for="distance">Distance Covered (km)</label>
+                    <input type="number" id="distance" placeholder="Distance in km">
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Scout Report Card -->
+        <div class="card full-width">
+            <h2>Scout Report</h2>
+            <div class="input-group">
+                <label for="scoutName">Scout Name</label>
+                <input type="text" id="scoutName" placeholder="Your name">
+            </div>
+            <div class="input-group">
+                <label>Overall Rating</label>
+                <div class="star-rating">
+                    <span class="star" data-value="1">★</span>
+                    <span class="star" data-value="2">★</span>
+                    <span class="star" data-value="3">★</span>
+                    <span class="star" data-value="4">★</span>
+                    <span class="star" data-value="5">★</span>
+                </div>
+                <input type="hidden" id="overallRating" value="0">
+            </div>
+            <div class="input-group">
+                <label for="strengthsText">Strengths</label>
+                <textarea id="strengthsText" placeholder="Player's key strengths"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="weaknessesText">Areas for Improvement</label>
+                <textarea id="weaknessesText" placeholder="Areas player could improve"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="tacticalFit">Tactical Fit</label>
+                <textarea id="tacticalFit" placeholder="How the player would fit into the team's tactics"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="summary">Summary</label>
+                <textarea id="summary" placeholder="Overall assessment and recommendation"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize variables
+        let radarChart;
+        let barChart;
+        let overallRating = 0;
+        
+        // DOM loaded event
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            setupEventListeners();
+            setupTabNavigation();
+        });
+        
+        function setupTabNavigation() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // Update radar chart to reflect the current tab
+                    updateRadarChart();
+                });
+            });
+        }
+
+        function setupEventListeners() {
+            // Player image change
+            document.getElementById('playerImage').addEventListener('change', function(e) {
+                updatePlayerImage();
+            });
+            
+            // Star rating system
+            document.querySelectorAll('.star').forEach(star => {
+                star.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    document.getElementById('overallRating').value = value;
+                    updateStars(value);
+                });
+            });
+            
+            // Stat sliders
+            document.querySelectorAll('.stat-slider').forEach(slider => {
+                slider.addEventListener('input', function() {
+                    // Update display value
+                    const valueId = this.id.replace('stat', '').toLowerCase() + 'Value';
+                    document.getElementById(valueId).textContent = this.value;
+                    
+                    // Update chart
+                    updateRadarChart();
+                });
+            });
+            
+            // Key stats inputs for bar chart
+            const statsInputs = ['goals', 'assists', 'passCompletionRate', 'keyPasses', 'tackles', 'interceptions'];
+            statsInputs.forEach(stat => {
+                document.getElementById(stat).addEventListener('change', updateBarChart);
+            });
+            
+            // Button actions
+            document.getElementById('saveBtn').addEventListener('click', saveReport);
+            document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+            document.getElementById('resetBtn').addEventListener('click', resetDashboard);
+        }
+        
+        function updatePlayerImage() {
+            const imageUrl = document.getElementById('playerImage').value;
+            const profileImage = document.getElementById('profileImage');
+            
+            if (imageUrl) {
+                profileImage.innerHTML = `<img src="${imageUrl}" alt="Player Image">`;
+            } else {
+                profileImage.innerHTML = `<span>Photo</span>`;
+            }
+        }
+        
+        function updateStars(value) {
+            document.querySelectorAll('.star').forEach(star => {
+                const starValue = star.getAttribute('data-value');
+                if (starValue <= value) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+        
+        function initCharts() {
+            // Initialize Radar Chart
+            const radarCtx = document.getElementById('radarChart').getContext('2d');
+            radarChart = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Passing', 'Shooting', 'Dribbling', 'First Touch', 'Tackling', 'Heading'],
+                    datasets: [{
+                        label: 'Technical Abilities',
+                        data: [5, 5, 5, 5, 5, 5],
+                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        pointBackgroundColor: 'rgba(52, 152, 219, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(52, 152, 219, 1)'
+                    }]
+                },
+                options: {
+                    scale: {
+                        ticks: {
+                            beginAtZero: true,
+                            max: 10,
+                            stepSize: 1
+                        }
+                    }
+                }
+            });
+            
+            // Initialize Bar Chart
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Goals', 'Assists', 'Pass %', 'Key Passes', 'Tackles', 'Interceptions'],
+                    datasets: [{
+                        label: 'Match Statistics',
+                        data: [0, 0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            'rgba(231, 76, 60, 0.7)',
+                            'rgba(52, 152, 219, 0.7)',
+                            'rgba(46, 204, 113, 0.7)',
+                            'rgba(155, 89, 182, 0.7)',
+                            'rgba(241, 196, 15, 0.7)',
+                            'rgba(230, 126, 34, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(155, 89, 182, 1)',
+                            'rgba(241, 196, 15, 1)',
+                            'rgba(230, 126, 34, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateRadarChart() {
+            // Get current active tab
+            const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+            
+            let labels = [];
+            let data = [];
+            
+            // Set data based on active tab
+            if (activeTab === 'technical') {
+                labels = ['Passing', 'Shooting', 'Dribbling', 'First Touch', 'Tackling', 'Heading'];
+                data = [
+                    document.getElementById('statPassing').value,
+                    document.getElementById('statShooting').value,
+                    document.getElementById('statDribbling').value,
+                    document.getElementById('statFirstTouch').value,
+                    document.getElementById('statTackling').value,
+                    document.getElementById('statHeading').value
+                ];
+            } else if (activeTab === 'physical') {
+                labels = ['Speed', 'Strength', 'Stamina', 'Agility', 'Jumping', 'Balance'];
+                data = [
+                    document.getElementById('statSpeed').value,
+                    document.getElementById('statStrength').value,
+                    document.getElementById('statStamina').value,
+                    document.getElementById('statAgility').value,
+                    document.getElementById('statJumping').value,
+                    document.getElementById('statBalance').value
+                ];
+            } else if (activeTab === 'mental') {
+                labels = ['Decision Making', 'Positioning', 'Teamwork', 'Leadership', 'Work Rate', 'Concentration'];
+                data = [
+                    document.getElementById('statDecisionMaking').value,
+                    document.getElementById('statPositioning').value,
+                    document.getElementById('statTeamwork').value,
+                    document.getElementById('statLeadership').value,
+                    document.getElementById('statWorkRate').value,
+                    document.getElementById('statConcentration').value
+                ];
+            }
+            
+            // Update chart
+            radarChart.data.labels = labels;
+            radarChart.data.datasets[0].label = activeTab.charAt(0).toUpperCase() + activeTab.slice(1) + ' Abilities';
+            radarChart.data.datasets[0].data = data;
+            radarChart.update();
+        }
+        
+        function updateBarChart() {
+            const goals = document.getElementById('goals').value || 0;
+            const assists = document.getElementById('assists').value || 0;
+            const passCompletionRate = document.getElementById('passCompletionRate').value || 0;
+            const keyPasses = document.getElementById('keyPasses').value || 0;
+            const tackles = document.getElementById('tackles').value || 0;
+            const interceptions = document.getElementById('interceptions').value || 0;
+            
+            barChart.data.datasets[0].data = [goals, assists, passCompletionRate, keyPasses, tackles, interceptions];
+            barChart.update();
+        }
+        
+        function collectData() {
+    // Collect all data from the dashboard
+    const data = {
+        playerInfo: {
+            name: document.getElementById('playerName').value,
+            age: document.getElementById('playerAge').value,
+            position: document.getElementById('playerPosition').value,
+            club: document.getElementById('playerClub').value,
+            height: document.getElementById('playerHeight').value,
+            weight: document.getElementById('playerWeight').value,
+            foot: document.getElementById('playerFoot').value,
+            imageUrl: document.getElementById('playerImage').value
+        },
+        technicalStats: {
+            passing: document.getElementById('statPassing').value,
+            shooting: document.getElementById('statShooting').value,
+            dribbling: document.getElementById('statDribbling').value,
+            firstTouch: document.getElementById('statFirstTouch').value,
+            tackling: document.getElementById('statTackling').value,
+            heading: document.getElementById('statHeading').value
+        },
+        physicalStats: {
+            speed: document.getElementById('statSpeed').value,
+            strength: document.getElementById('statStrength').value,
+            stamina: document.getElementById('statStamina').value,
+            agility: document.getElementById('statAgility').value,
+            jumping: document.getElementById('statJumping').value,
+            balance: document.getElementById('statBalance').value
+        },
+        mentalStats: {
+            decisionMaking: document.getElementById('statDecisionMaking').value,
+            positioning: document.getElementById('statPositioning').value,
+            teamwork: document.getElementById('statTeamwork').value,
+            leadership: document.getElementById('statLeadership').value,
+            workRate: document.getElementById('statWorkRate').value,
+            concentration: document.getElementById('statConcentration').value
+        }
+    };
+    return data;
+}
+
+function exportToExcel() {
+    const data = collectData();
+
+    const ws_data = [
+        ["JakeInSport - Player Scouting Report"],
+        [""],
+        ["Player Name", data.playerInfo.name],
+        ["Age", data.playerInfo.age],
+        ["Position", data.playerInfo.position],
+        ["Club", data.playerInfo.club],
+        ["Height (cm)", data.playerInfo.height],
+        ["Weight (kg)", data.playerInfo.weight],
+        ["Preferred Foot", data.playerInfo.foot],
+        [""],
+        ["--- Technical Stats ---"],
+        ...Object.entries(data.technicalStats),
+        [""],
+        ["--- Physical Stats ---"],
+        ...Object.entries(data.physicalStats),
+        [""],
+        ["--- Mental Stats ---"],
+        ...Object.entries(data.mentalStats),
+        [""],
+        ["Match Stats"],
+        ["Goals", document.getElementById('goals').value],
+        ["Assists", document.getElementById('assists').value],
+        ["Pass Completion (%)", document.getElementById('passCompletionRate').value],
+        ["Key Passes", document.getElementById('keyPasses').value],
+        ["Tackles", document.getElementById('tackles').value],
+        ["Interceptions", document.getElementById('interceptions').value],
+        ["Duels Won", document.getElementById('duelsWon').value],
+        ["Distance Covered (km)", document.getElementById('distance').value],
+        [""],
+        ["Scout Name", document.getElementById('scoutName').value],
+        ["Overall Rating (Stars)", document.getElementById('overallRating').value],
+        ["Strengths", document.getElementById('strengthsText').value],
+        ["Weaknesses", document.getElementById('weaknessesText').value],
+        ["Tactical Fit", document.getElementById('tacticalFit').value],
+        ["Summary", document.getElementById('summary').value]
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Scout Report");
+
+    XLSX.writeFile(wb, `${data.playerInfo.name || 'Player'}_Scouting_Report.xlsx`);
+}
+
+</script>
+</body>
+</html>
