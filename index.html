@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -95,7 +94,7 @@
         
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 400px;
             margin-top: 20px;
         }
         
@@ -439,8 +438,8 @@
                     <input type="number" id="assists" placeholder="Assists">
                 </div>
                 <div class="input-group">
-                    <label for="passCompletionRate">Pass Completion %</label>
-                    <input type="number" id="passCompletionRate" placeholder="% of passes completed">
+                    <label for="shots">Shots</label>
+                    <input type="number" id="shots" placeholder="Total shots">
                 </div>
                 <div class="input-group">
                     <label for="keyPasses">Key Passes</label>
@@ -453,10 +452,6 @@
                 <div class="input-group">
                     <label for="interceptions">Interceptions</label>
                     <input type="number" id="interceptions" placeholder="Interceptions">
-                </div>
-                <div class="input-group">
-                    <label for="duelsWon">Duels Won</label>
-                    <input type="number" id="duelsWon" placeholder="Duels won">
                 </div>
                 <div class="input-group">
                     <label for="distance">Distance Covered (km)</label>
@@ -552,11 +547,13 @@
                 });
             });
             
+
             // Stat sliders
             document.querySelectorAll('.stat-slider').forEach(slider => {
                 slider.addEventListener('input', function() {
                     // Update display value
-                    const valueId = this.id.replace('stat', '').toLowerCase() + 'Value';
+                    const baseName = this.id.replace('stat', '');
+                    const valueId = baseName.charAt(0).toLowerCase() + baseName.slice(1) + 'Value';
                     document.getElementById(valueId).textContent = this.value;
                     
                     // Update chart
@@ -565,7 +562,7 @@
             });
             
             // Key stats inputs for bar chart
-            const statsInputs = ['goals', 'assists', 'passCompletionRate', 'keyPasses', 'tackles', 'interceptions'];
+            const statsInputs = ['goals', 'assists', 'shots', 'keyPasses', 'tackles', 'interceptions'];
             statsInputs.forEach(stat => {
                 document.getElementById(stat).addEventListener('change', updateBarChart);
             });
@@ -632,7 +629,7 @@
             barChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
-                    labels: ['Goals', 'Assists', 'Pass %', 'Key Passes', 'Tackles', 'Interceptions'],
+                    labels: ['Goals', 'Assists', 'Shots', 'Key Passes', 'Tackles', 'Interceptions'],
                     datasets: [{
                         label: 'Match Statistics',
                         data: [0, 0, 0, 0, 0, 0],
@@ -642,7 +639,7 @@
                             'rgba(46, 204, 113, 0.7)',
                             'rgba(155, 89, 182, 0.7)',
                             'rgba(241, 196, 15, 0.7)',
-                            'rgba(230, 126, 34, 0.7)'
+                            'rgba(230, 126, 34, 0.7)',
                         ],
                         borderColor: [
                             'rgba(231, 76, 60, 1)',
@@ -650,7 +647,7 @@
                             'rgba(46, 204, 113, 1)',
                             'rgba(155, 89, 182, 1)',
                             'rgba(241, 196, 15, 1)',
-                            'rgba(230, 126, 34, 1)'
+                            'rgba(230, 126, 34, 1)',
                         ],
                         borderWidth: 1
                     }]
@@ -715,18 +712,17 @@
         function updateBarChart() {
             const goals = document.getElementById('goals').value || 0;
             const assists = document.getElementById('assists').value || 0;
-            const passCompletionRate = document.getElementById('passCompletionRate').value || 0;
+            const shots = document.getElementById('shots').value || 0;
             const keyPasses = document.getElementById('keyPasses').value || 0;
             const tackles = document.getElementById('tackles').value || 0;
             const interceptions = document.getElementById('interceptions').value || 0;
             
-            barChart.data.datasets[0].data = [goals, assists, passCompletionRate, keyPasses, tackles, interceptions];
+            barChart.data.datasets[0].data = [goals, assists, shots, keyPasses, tackles, interceptions];
             barChart.update();
         }
         
         function collectData() {
-    // Collect all data from the dashboard
-    const data = {
+    return {
         playerInfo: {
             name: document.getElementById('playerName').value,
             age: document.getElementById('playerAge').value,
@@ -762,8 +758,8 @@
             concentration: document.getElementById('statConcentration').value
         }
     };
-    return data;
 }
+
 
 function exportToExcel() {
     const data = collectData();
@@ -791,11 +787,10 @@ function exportToExcel() {
         ["Match Stats"],
         ["Goals", document.getElementById('goals').value],
         ["Assists", document.getElementById('assists').value],
-        ["Pass Completion (%)", document.getElementById('passCompletionRate').value],
+        ["Shots", document.getElementById('shots').value],
         ["Key Passes", document.getElementById('keyPasses').value],
         ["Tackles", document.getElementById('tackles').value],
         ["Interceptions", document.getElementById('interceptions').value],
-        ["Duels Won", document.getElementById('duelsWon').value],
         ["Distance Covered (km)", document.getElementById('distance').value],
         [""],
         ["Scout Name", document.getElementById('scoutName').value],
@@ -811,6 +806,74 @@ function exportToExcel() {
     XLSX.utils.book_append_sheet(wb, ws, "Scout Report");
 
     XLSX.writeFile(wb, `${data.playerInfo.name || 'Player'}_Scouting_Report.xlsx`);
+}
+
+function saveReport() {
+    const data = collectData();
+    
+    // Create a comprehensive report object
+    const report = {
+        ...data,
+        matchStats: {
+            matchDate: document.getElementById('matchDate').value,
+            opposition: document.getElementById('opposition').value,
+            minutesPlayed: document.getElementById('minutesPlayed').value,
+            goals: document.getElementById('goals').value,
+            assists: document.getElementById('assists').value,
+            shots: document.getElementById('shots').value,
+            keyPasses: document.getElementById('keyPasses').value,
+            tackles: document.getElementById('tackles').value,
+            interceptions: document.getElementById('interceptions').value,
+            distance: document.getElementById('distance').value
+        },
+        scoutReport: {
+            scoutName: document.getElementById('scoutName').value,
+            overallRating: document.getElementById('overallRating').value,
+            strengths: document.getElementById('strengthsText').value,
+            weaknesses: document.getElementById('weaknessesText').value,
+            tacticalFit: document.getElementById('tacticalFit').value,
+            summary: document.getElementById('summary').value
+        },
+        timestamp: new Date().toISOString()
+    };
+    
+    // Save to localStorage
+    const playerName = data.playerInfo.name || 'UnknownPlayer';
+    const reportKey = `scoutReport_${playerName}_${Date.now()}`;
+    localStorage.setItem(reportKey, JSON.stringify(report));
+    
+    alert(`Report saved successfully for ${playerName}!`);
+}
+
+function resetDashboard() {
+    if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+        // Reset all form fields
+        document.querySelectorAll('input, textarea, select').forEach(field => {
+            if (field.type === 'range') {
+                field.value = 5;
+                // Update corresponding display values
+                const baseName = field.id.replace('stat', '');
+                const valueId = baseName.charAt(0).toLowerCase() + baseName.slice(1) + 'Value';
+                const valueDisplay = document.getElementById(valueId);
+                if (valueDisplay) valueDisplay.textContent = '5';
+            } else {
+                field.value = '';
+            }
+        });
+        
+        // Reset star rating
+        document.querySelectorAll('.star').forEach(star => star.classList.remove('active'));
+        document.getElementById('overallRating').value = '0';
+        
+        // Reset profile image
+        document.getElementById('profileImage').innerHTML = '<span>Photo</span>';
+        
+        // Update charts
+        updateRadarChart();
+        updateBarChart();
+        
+        alert('Dashboard reset successfully!');
+    }
 }
 
 </script>
